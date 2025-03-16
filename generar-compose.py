@@ -1,0 +1,56 @@
+import sys
+
+SERVER_CONFIG = """  server:
+    container_name: server
+    image: server:latest
+    entrypoint: python3 /main.py
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOGGING_LEVEL=DEBUG
+    networks:
+      - testing_net
+"""
+
+NETWORKS_CONFIG = """networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24
+"""
+
+
+def _generate_client_config(client_id: int) -> str:
+    return f"""  client{client_id}:
+    container_name: client{client_id}
+    image: client:latest
+    entrypoint: /client
+    environment:
+      - CLI_ID={client_id}
+      - CLI_LOG_LEVEL=DEBUG
+    networks:
+      - testing_net
+    depends_on:
+      - server
+"""
+
+
+if len(sys.argv) != 3:
+    print("Uso: python generar-compose.py <nombre-archivo> <cantidad-clientes>")
+    sys.exit(1)
+
+compose_file_name = sys.argv[1]
+num_clients = int(sys.argv[2])
+
+with open(compose_file_name, "w") as f:
+    f.write("name: tp0\n")
+    f.write("services:\n")
+
+    f.write(SERVER_CONFIG)
+    f.write("\n")
+
+    for i in range(1, num_clients + 1):
+        f.write(_generate_client_config(i))
+        f.write("\n")
+
+    f.write(NETWORKS_CONFIG)
