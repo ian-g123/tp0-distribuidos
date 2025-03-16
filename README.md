@@ -194,3 +194,6 @@ Para ejecutar el script `generar-compose.sh` se debe correr el siguiente comando
 ```
 
 Si es que el archivo de salida tiene un nombre distinto a `docker-compose-dev.yaml`, tener en cuenta que el Makefile llama a `docker-compose-dev.yaml` por defecto, por lo que se deberá correr manualmente el archivo generado. Para ello primero debemos levantar las imágenes, corremos `make docker-image` y una vez finalizado, `docker compose -f <nombre_archivo_salida> up -d --build`.
+
+Se contemplaron casos de errores en los parámetros de entrada, como por ejemplo si se ingresa un valor no numérico en la cantidad de clientes, o si se ingresa un valor negativo, o la cantidad de argumentos no es la correcta. En estos casos se imprimirá un mensaje de error y se finalizará la ejecución del script.
+Además, si el usuario no ingresa la extensión del archivo de salida, se le agregará automáticamente `.yaml`.

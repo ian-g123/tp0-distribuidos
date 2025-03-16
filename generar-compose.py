@@ -40,17 +40,32 @@ if len(sys.argv) != 3:
     sys.exit(1)
 
 compose_file_name = sys.argv[1]
-num_clients = int(sys.argv[2])
+if not compose_file_name.endswith(".yaml"):
+    print("Error: El nombre del archivo debe terminar en '.yaml'.")
+    sys.exit(1)
+try:
+    num_clients = int(sys.argv[2])
+    if num_clients < 1:
+        raise ValueError(
+            "La cantidad de clientes debe ser un número positivo.")
+except ValueError:
+    print("Error: La cantidad de clientes debe ser un número entero positivo.")
+    sys.exit(1)
 
-with open(compose_file_name, "w") as f:
-    f.write("name: tp0\n")
-    f.write("services:\n")
 
-    f.write(SERVER_CONFIG)
-    f.write("\n")
+try:
+    with open(compose_file_name, "w") as f:
+        f.write("name: tp0\n")
+        f.write("services:\n")
 
-    for i in range(1, num_clients + 1):
-        f.write(_generate_client_config(i))
+        f.write(SERVER_CONFIG)
         f.write("\n")
 
-    f.write(NETWORKS_CONFIG)
+        for i in range(1, num_clients + 1):
+            f.write(_generate_client_config(i))
+            f.write("\n")
+
+        f.write(NETWORKS_CONFIG)
+except IOError as e:
+    print(f"Error al escribir el archivo '{compose_file_name}': {e}")
+    sys.exit(1)
