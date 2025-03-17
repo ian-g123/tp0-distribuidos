@@ -204,3 +204,12 @@ Los archivos de configuración no son copiados al crear la imagen debido al .doc
 
 Para ejecutar el ejercicio se debe correr los contenedores normalmente con `make docker-compose-up`. Y para verificar que los contenedores sean modificados mientras están corriendo, se puede modificar los archivos de configuración y con `docker exec -it <nombre_container> sh` se puede verificar que los archivos fueron modificados.
 
+### Ejercicio N°3:
+
+Para ejecutar el script `validar-echo-server.sh` se debe correr el siguiente comando:
+
+```bash
+./validar-echo-server.sh
+```
+
+Se asume que el contenedor del server se llama `server` y el puerto por el cual se comunica es el `12345`. Se utilizó `https://hub.docker.com/r/gophernet/netcat` ya que en primera instancia hubieron problemas con `subfuzion`.
