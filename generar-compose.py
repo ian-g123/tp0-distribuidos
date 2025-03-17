@@ -3,6 +3,8 @@ import sys
 SERVER_CONFIG = """  server:
     container_name: server
     image: server:latest
+    volumes:
+      - ./server/config.ini:/config.ini
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
@@ -24,6 +26,8 @@ def _generate_client_config(client_id: int) -> str:
     return f"""  client{client_id}:
     container_name: client{client_id}
     image: client:latest
+    volumes:
+      - ./client/config.yaml:/config.yaml
     entrypoint: /client
     environment:
       - CLI_ID={client_id}
@@ -45,10 +49,9 @@ if not compose_file_name.endswith(".yaml"):
     sys.exit(1)
 try:
     num_clients = int(sys.argv[2])
-    if num_clients < 0:
+    if num_clients < 1:
         raise ValueError(
-            "Pueden haber 0 o más clientes, pero la cantidad no puede ser negativa."
-        )
+            "La cantidad de clientes debe ser un número positivo.")
 except ValueError:
     print("Error: La cantidad de clientes debe ser un número entero positivo.")
     sys.exit(1)
