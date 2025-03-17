@@ -8,7 +8,6 @@ SERVER_CONFIG = """  server:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
-      - LOGGING_LEVEL=DEBUG
     networks:
       - testing_net
 """
@@ -31,7 +30,6 @@ def _generate_client_config(client_id: int) -> str:
     entrypoint: /client
     environment:
       - CLI_ID={client_id}
-      - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
     depends_on:
@@ -49,9 +47,10 @@ if not compose_file_name.endswith(".yaml"):
     sys.exit(1)
 try:
     num_clients = int(sys.argv[2])
-    if num_clients < 1:
+    if num_clients < 0:
         raise ValueError(
-            "La cantidad de clientes debe ser un número positivo.")
+            "Pueden haber 0 o más clientes, pero la cantidad no puede ser negativa."
+        )
 except ValueError:
     print("Error: La cantidad de clientes debe ser un número entero positivo.")
     sys.exit(1)
