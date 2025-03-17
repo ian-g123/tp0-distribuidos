@@ -9,13 +9,13 @@ El repositorio cuenta con un **Makefile** que incluye distintos comandos en form
 
 Los targets disponibles son:
 
-| target  | accion  |
-|---|---|
-|  `docker-compose-up`  | Inicializa el ambiente de desarrollo. Construye las imágenes del cliente y el servidor, inicializa los recursos a utilizar (volúmenes, redes, etc) e inicia los propios containers. |
-| `docker-compose-down`  | Ejecuta `docker-compose stop` para detener los containers asociados al compose y luego  `docker-compose down` para destruir todos los recursos asociados al proyecto que fueron inicializados. Se recomienda ejecutar este comando al finalizar cada ejecución para evitar que el disco de la máquina host se llene de versiones de desarrollo y recursos sin liberar. |
-|  `docker-compose-logs` | Permite ver los logs actuales del proyecto. Acompañar con `grep` para lograr ver mensajes de una aplicación específica dentro del compose. |
-| `docker-image`  | Construye las imágenes a ser utilizadas tanto en el servidor como en el cliente. Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para probar nuevos cambios en las imágenes antes de arrancar el proyecto. |
-| `build` | Compila la aplicación cliente para ejecución en el _host_ en lugar de en Docker. De este modo la compilación es mucho más veloz, pero requiere contar con todo el entorno de Golang y Python instalados en la máquina _host_. |
+| target                | accion                                                                                                                                                                                                                                                                                                                                                                 |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docker-compose-up`   | Inicializa el ambiente de desarrollo. Construye las imágenes del cliente y el servidor, inicializa los recursos a utilizar (volúmenes, redes, etc) e inicia los propios containers.                                                                                                                                                                                    |
+| `docker-compose-down` | Ejecuta `docker-compose stop` para detener los containers asociados al compose y luego  `docker-compose down` para destruir todos los recursos asociados al proyecto que fueron inicializados. Se recomienda ejecutar este comando al finalizar cada ejecución para evitar que el disco de la máquina host se llene de versiones de desarrollo y recursos sin liberar. |
+| `docker-compose-logs` | Permite ver los logs actuales del proyecto. Acompañar con `grep` para lograr ver mensajes de una aplicación específica dentro del compose.                                                                                                                                                                                                                             |
+| `docker-image`        | Construye las imágenes a ser utilizadas tanto en el servidor como en el cliente. Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para probar nuevos cambios en las imágenes antes de arrancar el proyecto.                                                                                                                        |
+| `build`               | Compila la aplicación cliente para ejecución en el _host_ en lugar de en Docker. De este modo la compilación es mucho más veloz, pero requiere contar con todo el entorno de Golang y Python instalados en la máquina _host_.                                                                                                                                          |
 
 ### Servidor
 
@@ -178,3 +178,22 @@ Se espera que se redacte una sección del README en donde se indique cómo ejecu
 Se proveen [pruebas automáticas](https://github.com/7574-sistemas-distribuidos/tp0-tests) de caja negra. Se exige que la resolución de los ejercicios pase tales pruebas, o en su defecto que las discrepancias sean justificadas y discutidas con los docentes antes del día de la entrega. El incumplimiento de las pruebas es condición de desaprobación, pero su cumplimiento no es suficiente para la aprobación. Respetar las entradas de log planteadas en los ejercicios, pues son las que se chequean en cada uno de los tests.
 
 La corrección personal tendrá en cuenta la calidad del código entregado y casos de error posibles, se manifiesten o no durante la ejecución del trabajo práctico. Se pide a los alumnos leer atentamente y **tener en cuenta** los criterios de corrección informados  [en el campus](https://campusgrado.fi.uba.ar/mod/page/view.php?id=73393).
+
+---
+
+# Ejecucion y consideraciones
+
+## Parte 1: Introducción a Docker
+
+### Ejercicio N°1:
+
+Para ejecutar el script `generar-compose.sh` se debe correr el siguiente comando:
+
+```bash
+./generar-compose.sh <nombre_archivo_salida> <cantidad_clientes>
+```
+
+Si es que el archivo de salida tiene un nombre distinto a `docker-compose-dev.yaml`, tener en cuenta que el Makefile llama a `docker-compose-dev.yaml` por defecto, por lo que se deberá correr manualmente el archivo generado. Para ello primero debemos levantar las imágenes, corremos `make docker-image` y una vez finalizado, `docker compose -f <nombre_archivo_salida> up -d --build`.
+
+Se contemplaron casos de errores en los parámetros de entrada, como por ejemplo si se ingresa un valor no numérico en la cantidad de clientes, o si se ingresa un valor negativo, o la cantidad de argumentos no es la correcta. En estos casos se imprimirá un mensaje de error y se finalizará la ejecución del script.
+Además, si el usuario no ingresa la extensión del archivo de salida, se le agregará automáticamente `.yaml`.
