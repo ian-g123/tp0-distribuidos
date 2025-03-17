@@ -197,3 +197,10 @@ Si es que el archivo de salida tiene un nombre distinto a `docker-compose-dev.ya
 
 Se contemplaron casos de errores en los parámetros de entrada, como por ejemplo si se ingresa un valor no numérico en la cantidad de clientes, o si se ingresa un valor negativo, o la cantidad de argumentos no es la correcta. En estos casos se imprimirá un mensaje de error y se finalizará la ejecución del script.
 Además, si el usuario no ingresa la extensión del archivo de salida, se le agregará automáticamente `.yaml`.
+
+### Ejercicio N°2:
+
+Los archivos de configuración no son copiados al crear la imagen debido al .dockerignore que se ubica en la raíz del proyecto. Deberieron estar en la raíz porque si se ponían dentro de las respectivas carpetas, docker no los leía porque estamos corriendo docker-compose desde la raíz del proyecto. Los archivos son inyectados luego con volumes como lo indica en el archivo `docker-compose-dev.yaml`.
+
+Para ejecutar el ejercicio se debe correr los contenedores normalmente con `make docker-compose-up`. Y para verificar que los contenedores sean modificados mientras están corriendo, se puede modificar los archivos de configuración y con `docker exec -it <nombre_container> sh` se puede verificar que los archivos fueron modificados.
+
