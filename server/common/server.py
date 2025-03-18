@@ -70,6 +70,7 @@ class Server:
             self._client_socket.close()
             self._server_socket = None
             logging.info("action: close_client_socket | result: success")
+        logging.info("action: graceful_shutdown | result: success")
 
     def __accept_new_connection(self):
         """
