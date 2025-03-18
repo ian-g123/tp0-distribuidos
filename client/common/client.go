@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/op/go-logging"
@@ -31,7 +34,22 @@ func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
 	}
+	shutdownSignalChannel := make(chan os.Signal, 1)
+	signal.Notify(shutdownSignalChannel, os.Interrupt, syscall.SIGTERM)
+	go client.gracefulShutdown(shutdownSignalChannel)
 	return client
+}
+
+func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
+	log.Debug("action: start_graceful_shutdown | result: success")
+	<-shutdownSignalChannel
+	close(shutdownSignalChannel)
+	if c.conn != nil {
+		c.conn.Close()
+		log.Infof("action: close_client_socket | result: success")
+	}
+	log.Infof("action: shutdown | result: success")
+	os.Exit(0)
 }
 
 // CreateClientSocket Initializes client socket. In case of
