@@ -213,3 +213,13 @@ Para ejecutar el script `validar-echo-server.sh` se debe correr el siguiente com
 ```
 
 Se asume que el contenedor del server se llama `server` y el puerto por el cual se comunica es el `12345`. Se utilizó `https://hub.docker.com/r/gophernet/netcat` ya que en primera instancia hubieron problemas con `subfuzion`.
+
+### Ejercicio N°4:
+
+Para ejecutar el ejercicio se debe correr los contenedores normalmente con `make docker-compose-up`. Luego, para detener los contenedores de forma _graceful_ se debe correr `make docker-compose-down`. Se pueden ver los logs correspondientes a la finalización de los recursos con `docker-compose-logs` y su posterior graceful shutdown.
+
+Si es necesario más tiempo para la detención de los contenedores, se puede correr el comando
+
+```bash
+docker-compose -f docker-compose-dev.yaml down -t <tiempo>
+```
