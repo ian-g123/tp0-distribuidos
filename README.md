@@ -223,3 +223,21 @@ Si es necesario más tiempo para la detención de los contenedores, se puede cor
 ```bash
 docker-compose -f docker-compose-dev.yaml down -t <tiempo>
 ```
+
+### Ejercicio N°5:
+
+Para ejecutar el programa se debe correr `make-docker-compose-up` que levantará una imagen con un apostor ya definido en docker-compose-dev.yaml y luego `make-docker-compose-logs` para ver los logs respectivos a la apuesta enviada y almacenada. Se debería ver parecido a lo siguiente:
+
+```bash
+docker compose -f docker-compose-dev.yaml logs -f
+server  | 2025-03-19 17:56:31 INFO     action: accept_connections | result: in_progress
+server  | 2025-03-19 17:56:31 INFO     action: accept_connections | result: success | ip: 172.25.125.3
+server  | 2025-03-19 17:56:31 INFO     action: apuesta_almacenada | result: success | dni: 30904465 | numero: 2201
+server  | 2025-03-19 17:56:31 INFO     action: accept_connections | result: in_progress
+client1  | 2025-03-19 17:56:31 INFO     action: config | result: success | client_id: 1 | server_address: server:12345 | loop_amount: 5 | loop_period: 5s | log_level: INFO
+client1  | 2025-03-19 17:56:31 INFO     action: apuesta_enviada | result: success | dni: 30904465 | numero: 2201
+```
+
+Además se puede ver el archivo `bets.csv` que guarda el servidor usando el comando `docker exec -it server bash` y luego `cat bets.csv`.
+
+El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato JSON, y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.
