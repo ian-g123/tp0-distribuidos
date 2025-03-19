@@ -2,6 +2,10 @@ import signal
 import socket
 import logging
 
+from common.comunication import read_from_socket, write_in_socket
+from common.serializer import deserializeBet
+from common.utils import store_bets
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -32,7 +36,7 @@ class Server:
             logging.error(f'action: server_error | result: fail | error: {e}')
         finally:
             if not self._shutting_down:
-                self.__graceful_shutdown_handler(None, None)
+                self.__graceful_shutdown_handler()
 
     def __handle_client_connection(self):
         """
@@ -41,19 +45,31 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+        bet = self.__receive_bet()
+        if not bet:
+            return
+        store_bets([bet])
+        write_in_socket(self._client_socket, "Bet received")
+        self._client_socket.close()
+        logging.info(
+            f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+
+    def __receive_bet(self):
+        json_data = read_from_socket(self._client_socket)
+        if not json_data:
+            logging.error("action: receive_bet | result: fail | error: no data received")
+            write_in_socket(self._client_socket, "Invalid bet")
+            self._client_socket.close()
+            return
+        logging.debug(f"action: receive_bet | result: in_progress | msg: {json_data}")
         try:
-            # TODO: Modify the receive to avoid short-reads
-            msg = self._client_socket.recv(1024).rstrip().decode('utf-8')
-            addr = self._client_socket.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            self._client_socket.send("{}\n".format(msg).encode('utf-8'))
-        except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
-        finally:
+            return deserializeBet(json_data)
+        except Exception as e:
+            logging.error(f"action: deserialize_bet | result: fail | error: {e}")
+            write_in_socket(self._client_socket, "Invalid bet")
             self._client_socket.close()
 
-    def __graceful_shutdown_handler(self, signum, frame):
+    def __graceful_shutdown_handler(self):
         """
         Function closes the server socket and all the client sockets
         and then exits the program
@@ -64,11 +80,9 @@ class Server:
         self._shutting_down = True
         if self._server_socket:
             self._server_socket.close()
-            self._server_socket = None
             logging.info("action: close_server_socket | result: success")
         if self._client_socket:
             self._client_socket.close()
-            self._server_socket = None
             logging.info("action: close_client_socket | result: success")
         logging.info("action: graceful_shutdown | result: success")
 
