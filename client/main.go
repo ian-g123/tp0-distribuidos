@@ -15,6 +15,8 @@ import (
 
 var log = logging.MustGetLogger("log")
 
+const BETS_CSV_PATH = "bets.csv"
+
 // InitConfig Function that uses viper library to parse configuration parameters.
 // Viper is configured to read variables from both environment variables and the
 // config file ./config.yaml. Environment variables takes precedence over parameters
@@ -114,21 +116,12 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		// LoopAmount:    v.GetInt("loop.amount"),
-		// LoopPeriod:    v.GetDuration("loop.period"),
+		MaxBatchSize:  v.GetInt("batch.maxAmount"),
+		BetsCsvPath:   BETS_CSV_PATH,
 	}
 
-	bet := common.NewBet(
-		v.GetString("nombre"),
-		v.GetString("apellido"),
-		v.GetString("documento"),
-		v.GetString("nacimiento"),
-		v.GetString("numero"),
-		v.GetString("id"),
-	)
-
 	client := common.NewClient(clientConfig)
-	if err := client.SendBet(bet); err != nil {
+	if err := client.SubmitBets(); err != nil {
 		log.Criticalf("action: send_bet | result: fail | client_id: %s | error: %v", clientConfig.ID, err)
 	}
 }

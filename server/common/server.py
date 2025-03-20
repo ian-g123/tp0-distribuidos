@@ -3,8 +3,11 @@ import socket
 import logging
 
 from common.comunication import read_from_socket, write_in_socket
-from common.serializer import deserializeBet
+from common.serializer import deserializeBets
 from common.utils import store_bets
+
+FINISH_MESSAGE = "finish"
+
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -15,9 +18,10 @@ class Server:
         self._client_socket = None
         self._running = True
         self._shutting_down = False
-        
+
         # Handle SIGINT (Ctrl+C) and SIGTERM (docker stop)
-        signal.signal(signal.SIGINT, signal.signal(signal.SIGTERM, self.__graceful_shutdown_handler))
+        signal.signal(signal.SIGINT, signal.signal(
+            signal.SIGTERM, self.__graceful_shutdown_handler))
 
     def run(self):
         """
@@ -26,12 +30,13 @@ class Server:
         Server that accept a new connections and establishes a
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
-        """        
+        """
         try:
             while self._running:
                 self._client_socket = self.__accept_new_connection()
                 if self._client_socket:
                     self.__handle_client_connection()
+                    self._client_socket.close()
         except Exception as e:
             logging.error(f'action: server_error | result: fail | error: {e}')
         finally:
@@ -45,29 +50,23 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        bet = self.__receive_bet()
-        if not bet:
-            return
-        store_bets([bet])
-        write_in_socket(self._client_socket, "Bet received")
-        self._client_socket.close()
-        logging.info(
-            f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
+        data_received = ""
+        amount_of_bets = 0
+        errors_in_bets = 0
 
-    def __receive_bet(self):
-        json_data = read_from_socket(self._client_socket)
-        if not json_data:
-            logging.error("action: receive_bet | result: fail | error: no data received")
-            write_in_socket(self._client_socket, "Invalid bet")
-            self._client_socket.close()
-            return
-        logging.debug(f"action: receive_bet | result: in_progress | msg: {json_data}")
-        try:
-            return deserializeBet(json_data)
-        except Exception as e:
-            logging.error(f"action: deserialize_bet | result: fail | error: {e}")
-            write_in_socket(self._client_socket, "Invalid bet")
-            self._client_socket.close()
+        while True:
+            data_received = read_from_socket(self._client_socket)
+            if data_received == FINISH_MESSAGE:
+                break
+            bets, errors = deserializeBets(data_received)
+            store_bets(bets)
+            amount_of_bets += len(bets)
+            errors_in_bets += errors
+        result = "success" if errors_in_bets == 0 else "fail"
+        logging.info(
+            f"action: apuesta_recibida | result: {result} | cantidad: {amount_of_bets}")
+        write_in_socket(self._client_socket,
+                        f"Se recibieron correctamente {amount_of_bets} de {amount_of_bets + errors_in_bets} apuestas")
 
     def __graceful_shutdown_handler(self):
         """
@@ -97,5 +96,6 @@ class Server:
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
-        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+        logging.info(
+            f'action: accept_connections | result: success | ip: {addr[0]}')
         return c

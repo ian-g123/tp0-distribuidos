@@ -1,23 +1,28 @@
 package common
 
 import (
+	"bufio"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
-	"time"
 
 	"github.com/op/go-logging"
 )
 
 var log = logging.MustGetLogger("log")
 
+const MAX_BATCH_SIZE = 8000 - 4 // Max kB size of a batch of bets (4 bytes for the size itself)
+const FINISH_MESSAGE = "finish"
+
 // ClientConfig Configuration used by the client
 type ClientConfig struct {
 	ID            string
 	ServerAddress string
-	LoopAmount    int
-	LoopPeriod    time.Duration
+	MaxBatchSize  int
+	BetsCsvPath   string
 }
 
 // Client Entity that encapsulates how
@@ -68,60 +73,101 @@ func (c *Client) createClientSocket() error {
 }
 
 // SendBet Sends a bet to the server and waits for an ACK from the server.
-func (c *Client) SendBet(bet *Bet) error {
+func (c *Client) SubmitBets() error {
 	err := c.createClientSocket()
 	if err != nil {
-		log.Errorf("action: create_client_socket | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+		log.Errorf("action: create_client_socket | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
 	}
 	defer c.conn.Close()
+	return c.sendBets()
+}
 
-	serializedBet := SerializeBet(bet)
-	if err := WriteInSocket(c.conn, serializedBet); err != nil {
-		log.Errorf("action: write_in_socket | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+func (c *Client) sendBets() error {
+	betsFile, err := os.Open(c.config.BetsCsvPath)
+	if err != nil {
+		log.Errorf("action: read_bets_from_csv | result: fail | error: %v", c.config.ID, err)
 		return err
 	}
-	log.Debugf("action: send_bet | result: success | client_id: %v | bet: %v",
-		c.config.ID,
-		serializedBet,
-	)
+	defer betsFile.Close()
+	defer func() {
+		if err != nil {
+			log.Errorf("action: send_bets | result: fail | error: %v", err)
+		}
+	}()
 
-	if err := c.waitForAck(); err != nil {
-		log.Errorf("action: wait_for_ack | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+	scanner := bufio.NewScanner(betsFile)
+	var batch strings.Builder
+	batchSize := 0
+	outgoingBetsCount := 0
+
+	for scanner.Scan() {
+		var serializedBet string
+		if serializedBet, err = c.processBetLine(scanner.Text()); err != nil {
+			continue
+		}
+		outgoingBetsCount++
+		serializedSize := len(serializedBet)
+
+		if batchSize+serializedSize >= MAX_BATCH_SIZE || outgoingBetsCount >= c.config.MaxBatchSize {
+			if err := c.sendAndResetBatch(&batch, &batchSize, outgoingBetsCount); err != nil {
+				return err
+			}
+			outgoingBetsCount = 0
+		}
+
+		batch.WriteString(serializedBet)
+		batchSize += serializedSize
+	}
+	if batch.Len() > 0 {
+		if err := c.sendAndResetBatch(&batch, &batchSize, outgoingBetsCount); err != nil {
+			return err
+		}
+	}
+	if err := c.notifyEndOfProcessAndWaitStats(); err != nil {
 		return err
 	}
-	log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-		bet.Document,
-		bet.Number,
-	)
-
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	log.Info("action: exit | result: success")
 	return nil
 }
 
-func (c *Client) waitForAck() error {
+// processBetLine Parses and serializes a single line from the CSV
+func (c *Client) processBetLine(line string) (string, error) {
+	betData := strings.Split(line, ",")
+	betData = append(betData, c.config.ID)
+	if len(betData) != 6 {
+		log.Errorf("action: process_bet_line | result: fail | error: invalid_bet_format: ", betData)
+		return "", fmt.Errorf("invalid bet format in CSV")
+	}
+	bet := NewBet(betData[0], betData[1], betData[2], betData[3], betData[4], betData[5])
+	return bet.Serialize(), nil
+}
+
+// sendAndResetBatch Sends the current batch and resets it
+func (c *Client) sendAndResetBatch(batch *strings.Builder, batchSize *int, outgoingBetsCount int) error {
+	log.Debugf("action: send_batch | batch size: %v | bets_sent: %v", *batchSize, outgoingBetsCount)
+	if err := WriteInSocket(c.conn, batch.String()); err != nil {
+		log.Errorf("action: send_batch | result: fail | error: %v", c.config.ID, err)
+		return err
+	}
+	batch.Reset()
+	*batchSize = 0
+	return nil
+}
+
+func (c *Client) notifyEndOfProcessAndWaitStats() error {
+	if err := WriteInSocket(c.conn, FINISH_MESSAGE); err != nil {
+		log.Errorf("action: notify_end_of_process | result: fail | error: %v", err)
+		return err
+	}
 	message, err := ReadFromSocket(c.conn)
 	if err != nil {
-		log.Errorf("action: wait_for_ack | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
+		log.Errorf("action: wait_for_stats | result: fail | error: %v", err)
 		return err
 	}
-	if message != "Bet received" {
-		log.Errorf("action: wait_for_ack | result: fail | client_id: %v | message: %v",
-			c.config.ID,
-			message,
-		)
-		return err
-	}
+	log.Infof("action: wait_for_stats | result: success | stats: %v", message)
 	return nil
 }

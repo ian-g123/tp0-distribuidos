@@ -1,11 +1,5 @@
 import sys
 
-NOMBRE = "Santiago Lionel"
-APELLIDO = "Lorca"
-DOCUMENTO = "30904465"
-NACIMIENTO = "1999-03-17"
-NUMERO = "2201"
-
 SERVER_CONFIG = """  server:
     container_name: server
     image: server:latest
@@ -33,14 +27,10 @@ def _generate_client_config(client_id: int) -> str:
     image: client:latest
     volumes:
       - ./client/config.yaml:/config.yaml
+      - ./.data/agency-{client_id}.csv:/bets.csv
     entrypoint: /client
     environment:
       - CLI_ID={client_id}
-      - NOMBRE={NOMBRE}
-      - APELLIDO={APELLIDO}
-      - DOCUMENTO={DOCUMENTO}
-      - NACIMIENTO={NACIMIENTO}
-      - NUMERO={NUMERO}
     networks:
       - testing_net
     depends_on:
