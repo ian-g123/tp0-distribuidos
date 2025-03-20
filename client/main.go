@@ -25,18 +25,26 @@ func InitConfig() (*viper.Viper, error) {
 
 	// Configure viper to read env variables with the CLI_ prefix
 	v.AutomaticEnv()
+
+	// Add env variables needed by the client
+	v.BindEnv("nombre")
+	v.BindEnv("apellido")
+	v.BindEnv("documento")
+	v.BindEnv("nacimiento")
+	v.BindEnv("numero") // Bet number
+
 	v.SetEnvPrefix("cli")
 	// Use a replacer to replace env variables underscores with points. This let us
 	// use nested configurations in the config file and at the same time define
 	// env variables for the nested configurations
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Add env variables supported
-	v.BindEnv("id")
+	// Add env variables needed by the program
+	v.BindEnv("id") // (Bet agency) client id
 	v.BindEnv("server", "address")
-	v.BindEnv("loop", "period")
-	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	// v.BindEnv("loop", "period")
+	// v.BindEnv("loop", "amount")
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -106,10 +114,21 @@ func main() {
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
 		ID:            v.GetString("id"),
-		LoopAmount:    v.GetInt("loop.amount"),
-		LoopPeriod:    v.GetDuration("loop.period"),
+		// LoopAmount:    v.GetInt("loop.amount"),
+		// LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
+	bet := common.NewBet(
+		v.GetString("nombre"),
+		v.GetString("apellido"),
+		v.GetString("documento"),
+		v.GetString("nacimiento"),
+		v.GetString("numero"),
+		v.GetString("id"),
+	)
+
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	if err := client.SendBet(bet); err != nil {
+		log.Criticalf("action: send_bet | result: fail | client_id: %s | error: %v", clientConfig.ID, err)
+	}
 }
