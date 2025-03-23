@@ -162,11 +162,25 @@ func (c *Client) notifyEndOfProcessAndWaitStats() error {
 		log.Errorf("action: notify_end_of_process | result: fail | error: %v", err)
 		return err
 	}
+
 	message, err := ReadFromSocket(c.conn)
 	if err != nil {
 		log.Errorf("action: wait_for_stats | result: fail | error: %v", err)
 		return err
 	}
-	log.Infof("action: wait_for_stats | result: success | stats: %v", message)
+	log.Infof("action: bets sent | result: success | stats: %v", message)
+
+	log.Debugf("action: consulta_ganadores | result: in_progress")
+	var document_winners []string
+	message, err = ReadFromSocket(c.conn)
+	if err != nil {
+		log.Errorf("action: consulta_ganadores | result: fail | error: %v", err)
+		return err
+	}
+	if message != "" {
+		document_winners = strings.Split(message, ",")
+	}
+	log.Debugf("action: consulta_ganadores | result: success | ganadores: %v", document_winners)
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", len(document_winners))
 	return nil
 }

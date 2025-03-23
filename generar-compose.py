@@ -1,6 +1,15 @@
 import sys
 
-SERVER_CONFIG = """  server:
+NETWORKS_CONFIG = """networks:
+  testing_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.25.125.0/24
+"""
+
+def _generate_server_config(client_id: int) -> str:
+    return f"""  server:
     container_name: server
     image: server:latest
     volumes:
@@ -8,16 +17,9 @@ SERVER_CONFIG = """  server:
     entrypoint: python3 /main.py
     environment:
       - PYTHONUNBUFFERED=1
+      - AMOUNT_OF_CLIENTS={num_clients}
     networks:
       - testing_net
-"""
-
-NETWORKS_CONFIG = """networks:
-  testing_net:
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.25.125.0/24
 """
 
 
@@ -62,7 +64,7 @@ try:
         f.write("name: tp0\n")
         f.write("services:\n")
 
-        f.write(SERVER_CONFIG)
+        f.write(_generate_server_config(num_clients))
         f.write("\n")
 
         for i in range(1, num_clients + 1):
