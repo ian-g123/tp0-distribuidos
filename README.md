@@ -265,3 +265,5 @@ Si se desea observar el tamaño de los chunks y la cantidad de apuestas que se e
 ```bash
 client1  | 2025-03-20 14:11:18 DEBUG     action: send_batch | batch size: 3026 | bets_sent: 23
 ```
+
+La forma en la que el servidor sabe cuándo el cliente envió todos los batches es a través del mensaje de finish que envía el cliente al finalizar con todos los envíos. 
