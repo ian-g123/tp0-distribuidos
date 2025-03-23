@@ -241,3 +241,27 @@ client1  | 2025-03-19 17:56:31 INFO     action: apuesta_enviada | result: succes
 Además se puede ver el archivo `bets.csv` que guarda el servidor usando el comando `docker exec -it server bash` y luego `cat bets.csv`.
 
 El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato JSON, y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.
+
+### Ejercicio N°6:
+
+Para ejecutar el programa se debe generar un archivo docker compose con hasta 5 clientes o dejar el `docker-compose-dev.yaml` por defecto, luego correr `make-docker-compose-up` y `make-docker-compose-logs` para ver los logs respectivos de las apuestas tanto en el cliente como en el servidor. En el server, si salió todo de forma correcta, se verá algo parecido a lo siguiente:
+
+```bash
+server   | 2025-03-20 13:48:42 INFO     action: apuesta_recibida | result: success | cantidad: 9238
+```
+
+En el cliente, se podrá ver
+
+```bash
+client4  | 2025-03-20 13:48:42 INFO     action: wait_for_stats | result: success | stats: Se recibieron correctamente 9238 de 9238 apuestas
+```
+
+Se podrá observar si se ejecuta en bash en el servidor las apuestas guardadas en el archivo `bets.csv` con el comando `cat bets.csv`.
+
+Sobre posibles errores que ocurran por envíos incorrectos de algunas apuestas dentro del batch, se decidió descartar aquellas incorrectas, pero persistir las correctas. Por eso es que el servidor responde cuántas apuestas recibió correctamente del total.
+
+Si se desea observar el tamaño de los chunks y la cantidad de apuestas que se envían en cada uno, se puede bajar el nivel de log a `DEBUG`, donde se debería ver algo parecido a lo siguiente:
+
+```bash
+client1  | 2025-03-20 14:11:18 DEBUG     action: send_batch | batch size: 3026 | bets_sent: 23
+```
