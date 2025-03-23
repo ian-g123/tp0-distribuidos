@@ -124,4 +124,6 @@ func main() {
 	if err := client.SubmitBets(); err != nil {
 		log.Criticalf("action: send_bet | result: fail | client_id: %s | error: %v", clientConfig.ID, err)
 	}
+
+	time.Sleep(5 * time.Second) // Sleep to await for docker to flush logs
 }

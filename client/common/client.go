@@ -130,7 +130,6 @@ func (c *Client) sendBets() error {
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	log.Info("action: exit | result: success")
 	return nil
 }
 
