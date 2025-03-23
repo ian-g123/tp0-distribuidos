@@ -266,6 +266,8 @@ Si se desea observar el tamaño de los chunks y la cantidad de apuestas que se e
 client1  | 2025-03-20 14:11:18 DEBUG     action: send_batch | batch size: 3026 | bets_sent: 23
 ```
 
+La forma en la que el servidor sabe cuándo el cliente envió todos los batches es a través del mensaje de finish que envía el cliente al finalizar con todos los envíos. 
+
 ### Ejercicio N°7:
 
 La forma en la que el cliente notifica la finalización de envío de apuestas es a través de un simple mensaje "finish" al servidor, es aprovechado este mensaje porque quiere decir también que se enviaron todos los batches. Como la acción posterior a esta es la consulta de lista de ganadores, se lo toma como implícito y el cliente sólo espera los resultados.
