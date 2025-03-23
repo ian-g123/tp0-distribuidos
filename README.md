@@ -265,3 +265,24 @@ Si se desea observar el tamaño de los chunks y la cantidad de apuestas que se e
 ```bash
 client1  | 2025-03-20 14:11:18 DEBUG     action: send_batch | batch size: 3026 | bets_sent: 23
 ```
+
+### Ejercicio N°7:
+
+La forma en la que el cliente notifica la finalización de envío de apuestas es a través de un simple mensaje "finish" al servidor, es aprovechado este mensaje porque quiere decir también que se enviaron todos los batches. Como la acción posterior a esta es la consulta de lista de ganadores, se lo toma como implícito y el cliente sólo espera los resultados.
+En el servidor, se espera a que todos los clientes envíen sus apuestas. Esto se logra aceptando conexiones de todos los clientes con un timeout de 1 minuto desde que se termina de recibir las apuestas de un cliente. Si no se reciben nuevas agencias en ese tiempo, se considera que se terminó el sorteo y se procede a verificar los ganadores.
+
+Para ejecutar el programa se debe correr `make-docker-compose-up` y posteriormente podemos ver los logs con `make-docker-compose-logs`. En resumen se tendría que observar entre los logs:
+
+```bash
+server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 4 | winners: 35635602,34963649
+server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 3 | winners: 28188111,23328212,22737492
+server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 1 | winners: 24807259,30876370
+server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 2 | winners: 24813860,31660107,33791469
+server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 5 | winners: 
+server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success
+client1  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 2
+client2  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 3
+client3  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 3
+client4  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 2
+client5  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 0
+```
