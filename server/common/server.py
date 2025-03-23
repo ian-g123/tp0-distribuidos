@@ -7,7 +7,6 @@ from common.serializer import deserializeBets
 from common.utils import has_won, load_bets, store_bets
 
 FINISH_MESSAGE = "finish"
-TIMEOUT_WAIT = 1 # minutes
 
 
 class Server:
@@ -34,7 +33,6 @@ class Server:
         finishes, servers starts to accept new connections again
         """
         try:
-            self._server_socket.settimeout(TIMEOUT_WAIT * 3)
             for _ in range(self._amount_of_clients):
                 client_socket = self.__accept_new_connection()
                 if client_socket:
