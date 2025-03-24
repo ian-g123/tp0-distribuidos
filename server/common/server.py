@@ -2,6 +2,7 @@ import signal
 import socket
 import logging
 
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
@@ -11,9 +12,10 @@ class Server:
         self._client_socket = None
         self._running = True
         self._shutting_down = False
-        
+
         # Handle SIGINT (Ctrl+C) and SIGTERM (docker stop)
-        signal.signal(signal.SIGINT, signal.signal(signal.SIGTERM, self.__graceful_shutdown_handler))
+        signal.signal(signal.SIGTERM, self.__graceful_shutdown_handler)
+        signal.signal(signal.SIGINT, self.__graceful_shutdown_handler)
 
     def run(self):
         """
@@ -22,7 +24,7 @@ class Server:
         Server that accept a new connections and establishes a
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
-        """        
+        """
         try:
             while self._running:
                 self._client_socket = self.__accept_new_connection()
@@ -45,15 +47,17 @@ class Server:
             # TODO: Modify the receive to avoid short-reads
             msg = self._client_socket.recv(1024).rstrip().decode('utf-8')
             addr = self._client_socket.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+            logging.info(
+                f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             # TODO: Modify the send to avoid short-writes
             self._client_socket.send("{}\n".format(msg).encode('utf-8'))
         except OSError as e:
-            logging.error("action: receive_message | result: fail | error: {e}")
+            logging.error(
+                "action: receive_message | result: fail | error: {e}")
         finally:
             self._client_socket.close()
 
-    def __graceful_shutdown_handler(self, signum, frame):
+    def __graceful_shutdown_handler(self, signum=None, frame=None):
         """
         Function closes the server socket and all the client sockets
         and then exits the program
@@ -83,5 +87,6 @@ class Server:
         # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         c, addr = self._server_socket.accept()
-        logging.info(f'action: accept_connections | result: success | ip: {addr[0]}')
+        logging.info(
+            f'action: accept_connections | result: success | ip: {addr[0]}')
         return c
