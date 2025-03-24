@@ -20,8 +20,8 @@ class Server:
         self._shutting_down = False
 
         # Handle SIGINT (Ctrl+C) and SIGTERM (docker stop)
-        signal.signal(signal.SIGINT, signal.signal(
-            signal.SIGTERM, self.__graceful_shutdown_handler))
+        signal.signal(signal.SIGTERM, self.__graceful_shutdown_handler)
+        signal.signal(signal.SIGINT, self.__graceful_shutdown_handler)
 
     def run(self):
         """
@@ -68,7 +68,7 @@ class Server:
         write_in_socket(self._client_socket,
                         f"Se recibieron correctamente {amount_of_bets} de {amount_of_bets + errors_in_bets} apuestas")
 
-    def __graceful_shutdown_handler(self):
+    def __graceful_shutdown_handler(self, signum=None, frame=None):
         """
         Function closes the server socket and all the client sockets
         and then exits the program
