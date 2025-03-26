@@ -1,22 +1,19 @@
 from common.utils import Bet
+from datetime import date
 
 
-def deserializeBet(data_json: str):
+def deserializeBet(data_csv: str):
     """
-    Deserializes a JSON string into a Bet object.
+    Deserializes csv data into a Bet object
     """
-    if not data_json.startswith("{") or not data_json.endswith("}"):
-        raise ValueError("Invalid JSON string")
-    
-    data_trimmed = data_json[1:-1]
-    pairs = data_trimmed.split(",")
-    bet = {}
-    for pair in pairs:
-        key, value = pair.split(":")
-        # remove quotes
-        key = key.strip()[1:-1]
-        value = value.strip()[1:-1]
-        bet[key] = value
-    
-    return Bet(bet["agency"], bet["firstName"], bet["lastName"], bet["document"], bet["birthdate"], bet["number"])
+    bet_attributes = data_csv.split(",")
+    if len(bet_attributes) != 6:
+        raise ValueError("Each bet must have 6 attributes")
+    if not bet_attributes[0].isdigit() or not bet_attributes[5].isdigit():
+        raise ValueError("agency and bet number must be integers")
+    try:
+        date.fromisoformat(bet_attributes[4])
+    except ValueError:
+        raise ValueError("birthdate must be in the format 'YYYY-MM-DD'")
 
+    return Bet(*bet_attributes)

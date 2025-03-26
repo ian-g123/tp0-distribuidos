@@ -4,7 +4,7 @@ import "fmt"
 
 func SerializeBet(bet *Bet) string {
 	return fmt.Sprintf(
-		`{"firstName":"%s","lastName":"%s","document":"%s","birthdate":"%s","number":"%s","agency":"%s"}`,
-		bet.firstName, bet.lastName, bet.Document, bet.birthdate, bet.Number, bet.agency,
+		`%s,%s,%s,%s,%s,%s`,
+		bet.agency, bet.firstName, bet.lastName, bet.Document, bet.birthdate, bet.Number,
 	)
 }
