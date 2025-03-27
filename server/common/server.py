@@ -107,7 +107,6 @@ class Server:
     def __graceful_shutdown_handler(self, signum=None, frame=None):
         """
         Function closes the server socket and all the client sockets
-        and then exits the program
         """
         logging.debug(
             f'action: graceful_shutdown | result: in_progress')

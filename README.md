@@ -224,6 +224,8 @@ Si es necesario más tiempo para la detención de los contenedores, se puede cor
 docker-compose -f docker-compose-dev.yaml down -t <tiempo>
 ```
 
+Para este ejercicio se decidió cerrar los sockets de los clientes y servidores de forma _graceful_. De manera que las siguientes operaciones en curso terminen o fallen de forma controlada.
+
 ### Ejercicio N°5:
 
 Para ejecutar el programa se debe correr `make-docker-compose-up` que levantará una imagen con un apostor ya definido en docker-compose-dev.yaml y luego `make-docker-compose-logs` para ver los logs respectivos a la apuesta enviada y almacenada. Se debería ver parecido a lo siguiente:
@@ -240,7 +242,7 @@ client1  | 2025-03-19 17:56:31 INFO     action: apuesta_enviada | result: succes
 
 Además se puede ver el archivo `bets.csv` que guarda el servidor usando el comando `docker exec -it server bash` y luego `cat bets.csv`.
 
-El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato JSON, y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.
+El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato CSV, ya que primeramente se quiso utilizar JSON, pero debido al overhead que trae la serialización de keys-values se decidió implementar un simple CSV y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.
 
 ### Ejercicio N°6:
 
@@ -266,14 +268,15 @@ Si se desea observar el tamaño de los chunks y la cantidad de apuestas que se e
 client1  | 2025-03-20 14:11:18 DEBUG     action: send_batch | batch size: 3026 | bets_sent: 23
 ```
 
+Para el envío en chuncks el cliente va leyendo y procesando las líneas de los archivos csv de las apuestas y las va enviando en chunks, para ello se tuvo que agregar un `;` entre cada apuesta para poder separarlas.
 La forma en la que el servidor sabe cuándo el cliente envió todos los batches es a través del mensaje de finish que envía el cliente al finalizar con todos los envíos. 
 
 ### Ejercicio N°7:
 
 La forma en la que el cliente notifica la finalización de envío de apuestas es a través de un simple mensaje "finish" al servidor, es aprovechado este mensaje porque quiere decir también que se enviaron todos los batches. Como la acción posterior a esta es la consulta de lista de ganadores, se lo toma como implícito y el cliente sólo espera los resultados.
-En el servidor, se espera a que todos los clientes envíen sus apuestas. Esto se logra aceptando conexiones de todos los clientes con un timeout de 1 minuto desde que se termina de recibir las apuestas de un cliente. Si no se reciben nuevas agencias en ese tiempo, se considera que se terminó el sorteo y se procede a verificar los ganadores.
+En el servidor, se espera a que todos los clientes envíen sus apuestas. Cuando esto sucede se procede a realizar el sorteo y se responde a las consultas de los clientes.
 
-Para ejecutar el programa se debe correr `make-docker-compose-up` y posteriormente podemos ver los logs con `make-docker-compose-logs`. En resumen se tendría que observar entre los logs:
+Para ejecutar el programa se debe correr `make docker-compose-up` y posteriormente podemos ver los logs con `make docker-compose-logs`. En resumen se tendría que observar entre los logs:
 
 ```bash
 server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 4 | winners: 35635602,34963649
