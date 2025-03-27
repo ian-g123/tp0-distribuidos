@@ -47,6 +47,8 @@ func NewClient(config ClientConfig) *Client {
 	return client
 }
 
+// gracefulShutdown waits for a message to shutdown the client
+// and cleans up the resources
 func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
 	log.Debug("action: start_graceful_shutdown | result: success")
 	<-shutdownSignalChannel
@@ -86,6 +88,13 @@ func (c *Client) SubmitBets() error {
 	return c.sendBets()
 }
 
+// sendBets reads bets from a CSV file, processes them, and sends them in batches to a server.
+// It ensures that the batch size does not exceed the configured maximum size or the maximum
+// serialized size. After sending all bets, it notifies the server about the end of the process
+// and waits for statistics.
+//
+// Returns an error if there is an issue reading the file, processing a bet line, sending a batch,
+// notifying the end of the process, or if there is a scanner error.
 func (c *Client) sendBets() error {
 	betsFile, err := os.Open(c.config.BetsCsvPath)
 	if err != nil {
@@ -164,6 +173,15 @@ func (c *Client) sendAndResetBatch(batch *strings.Builder, batchSize *int, outgo
 	return nil
 }
 
+// notifyEndOfProcessAndWaitStats sends a notification to indicate the end of a process
+// and waits for statistical data from the server. It performs the following steps:
+// 1. Sends a "FINISH_MESSAGE" through the socket connection.
+// 2. Reads a response message containing statistical data of the bets sent.
+// 3. Initiates a query for document winners by reading another message from the server.
+// 4. Parses the list of winners from the received message and logs the results.
+//
+// Returns an error if any socket communication fails or if there is an issue
+// during the process.
 func (c *Client) notifyEndOfProcessAndWaitStats() error {
 	if err := WriteInSocket(c.conn, FINISH_MESSAGE); err != nil {
 		log.Errorf("action: notify_end_of_process | result: fail | error: %v", err)
