@@ -7,15 +7,10 @@ import (
 
 func WriteInSocket(conn net.Conn, message string) error {
 	messageLength := int32(len(message))
-	lengthBuffer := make([]byte, 4)
-	binary.BigEndian.PutUint32(lengthBuffer, uint32(messageLength))
-
-	if err := writeFully(conn, lengthBuffer); err != nil {
-		log.Errorf("action: write_in_socket | result: fail | error: %v", err)
-		return err
-	}
-
-	if err := writeFully(conn, []byte(message)); err != nil {
+	packet := make([]byte, 4+len(message))
+	binary.BigEndian.PutUint32(packet[:4], uint32(messageLength))
+	copy(packet[4:], message)
+	if err := writeFully(conn, packet); err != nil {
 		log.Errorf("action: write_in_socket | result: fail | error: %v", err)
 		return err
 	}
