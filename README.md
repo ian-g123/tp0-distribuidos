@@ -223,3 +223,5 @@ Si es necesario más tiempo para la detención de los contenedores, se puede cor
 ```bash
 docker-compose -f docker-compose-dev.yaml down -t <tiempo>
 ```
+
+Para este ejercicio se decidió cerrar los sockets de los clientes y servidores de forma _graceful_. De manera que las siguientes operaciones en curso terminen o fallen de forma controlada.

@@ -42,6 +42,8 @@ func NewClient(config ClientConfig) *Client {
 	return client
 }
 
+// gracefulShutdown waits for a message to shutdown the client
+// and cleans up the resources
 func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
 	log.Debug("action: start_graceful_shutdown | result: success")
 	<-shutdownSignalChannel
