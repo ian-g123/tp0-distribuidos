@@ -26,8 +26,8 @@ class Server:
         self._shutting_down = False
 
         # Handle SIGINT (Ctrl+C) and SIGTERM (docker stop)
-        signal.signal(signal.SIGINT, self.__graceful_shutdown_handler)
         signal.signal(signal.SIGTERM, self.__graceful_shutdown_handler)
+        signal.signal(signal.SIGINT, self.__graceful_shutdown_handler)
 
     def run(self):
         processes = []
