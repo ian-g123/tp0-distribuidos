@@ -55,6 +55,7 @@ class Server:
         try:
             self.__receive_client()
             self._barrier.wait()
+            logging.info("action: sorteo | result: success")
             self.__handle_bet_results()
         except Exception as e:
             logging.error(f'action: server_error | result: fail | error: {e}')
