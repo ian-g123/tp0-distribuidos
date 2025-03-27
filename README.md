@@ -224,6 +224,8 @@ Si es necesario más tiempo para la detención de los contenedores, se puede cor
 docker-compose -f docker-compose-dev.yaml down -t <tiempo>
 ```
 
+Para este ejercicio se decidió cerrar los sockets de los clientes y servidores de forma _graceful_. De manera que las siguientes operaciones en curso terminen o fallen de forma controlada.
+
 ### Ejercicio N°5:
 
 Para ejecutar el programa se debe correr `make-docker-compose-up` que levantará una imagen con un apostor ya definido en docker-compose-dev.yaml y luego `make-docker-compose-logs` para ver los logs respectivos a la apuesta enviada y almacenada. Se debería ver parecido a lo siguiente:
@@ -268,12 +270,14 @@ client1  | 2025-03-20 14:11:18 DEBUG     action: send_batch | batch size: 3026 |
 
 La forma en la que el servidor sabe cuándo el cliente envió todos los batches es a través del mensaje de finish que envía el cliente al finalizar con todos los envíos. 
 
+El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato CSV, ya que primeramente se quiso utilizar JSON, pero debido al overhead que trae la serialización de keys-values se decidió implementar un simple CSV y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.
+
 ### Ejercicio N°7:
 
 La forma en la que el cliente notifica la finalización de envío de apuestas es a través de un simple mensaje "finish" al servidor, es aprovechado este mensaje porque quiere decir también que se enviaron todos los batches. Como la acción posterior a esta es la consulta de lista de ganadores, se lo toma como implícito y el cliente sólo espera los resultados.
-En el servidor, se espera a que todos los clientes envíen sus apuestas. Esto se logra aceptando conexiones de todos los clientes con un timeout de 1 minuto desde que se termina de recibir las apuestas de un cliente. Si no se reciben nuevas agencias en ese tiempo, se considera que se terminó el sorteo y se procede a verificar los ganadores.
+En el servidor, se espera a que todos los clientes envíen sus apuestas. Cuando esto sucede se procede a realizar el sorteo y se responde a las consultas de los clientes.
 
-Para ejecutar el programa se debe correr `make-docker-compose-up` y posteriormente podemos ver los logs con `make-docker-compose-logs`. En resumen se tendría que observar entre los logs:
+Para ejecutar el programa se debe correr `make docker-compose-up` y posteriormente podemos ver los logs con `make docker-compose-logs`. En resumen se tendría que observar entre los logs:
 
 ```bash
 server   | 2025-03-23 18:37:37 INFO     action: notify_winners | result: success | agency: 4 | winners: 35635602,34963649
@@ -291,7 +295,9 @@ client5  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: suc
 
 ### Ejercicio N°8:
 
-Para este ejercicio se probó usar async, pero por alguna razón por la que carezco de conocimiento no aceptaba correctamente las conexiones (que me gustaría poder hablar con los profesores por simple conocimiento), por lo que se decidió implementar un sistema con multiprocessing.
-En un comienzo la idea de sincronización iba a ser sencilla y con pocos cambios del ej7 al ej8, pero desconozco porqué los subprocesos no se cerraban correctamente y al joinearlos estos quedaban colgados, el join iba a ser el barrier como mecanizmo de sincronización. Debido a esto se decidió usar simplemente barriers, creando un proceso por cada cliente y usando un barrier para determinar cuando se recibieron correctamente todas las apuestas de los clientes. Luego cada proceso avisaría a su respectivo cliente.
+Para este ejercicio se probó usar async, pero debido a que el código cambiaba mucho entre lo que teníamos y lo que se necesitaba, se decantó en usar threads o multiprocessing. Con threads iba a ser la solución más sencilla, ya que el proceso de sincroniazción era mediante joins, pero ya que he trabajado en el pasado con threads, por mera razón académica decidí usar multiprocessing. Aclaración: no hay razón alguna por la que crea que multiprocessing es mejor que multithreading para este ejercicios, de hecho creo que es mejor multithreading porque hay operaciones de I/O y por como funciona el intérprete de Python, creo que sería mejor usar threads.
+
+Debido al uso de multiprocessing, como mecanismo de sincronización se usaron barriers, para que los procesos esperen a que todas las apuestas de todos los clientes fueran enviadas, creando un proceso por cada cliente y usando un barrier para determinar cuando se recibieron correctamente todas las apuestas de los clientes. Luego cada proceso avisaría a su respectivo cliente.
+Lo más importante a destacar de la solución es cuándo se crean los procesos, que es luego de hacer el bind. Esto se hizo solamente por simplicidad, ya que el SO maneja los procesos como una cola FIFO, y permite así que por cada cliente que se conecte, se cree un proceso sea el encargado de aceptarlo (lo hablamos un poco al final de la clase del martes con el profe Pablo). Se podría crear procesos después de aceptar la conexión, pero lo primero hace que sea más sencillo el código.
 
 La ejecución es la misma que en el ejercicio 7.

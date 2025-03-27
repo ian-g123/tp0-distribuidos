@@ -14,6 +14,8 @@ class Server:
     def __init__(self, port, listen_backlog, amount_of_clients):
         # Initialize server socket
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._server_socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
 
@@ -43,6 +45,13 @@ class Server:
                 self.__graceful_shutdown_handler()
 
     def __run(self):
+        """
+        Executes the main server operations in a controlled sequence.
+
+        This method handles the reception of client connections for subprocesses, synchronizes
+        operations using a barrier, processes bet results, and ensures proper
+        shutdown in case of errors or completion.
+        """
         try:
             self.__receive_client()
             self._barrier.wait()
@@ -54,6 +63,10 @@ class Server:
                 self.__graceful_shutdown_handler()
 
     def __handle_bet_results(self):
+        """
+        Handles the processing of bet results by determining the winners and notifying
+        the winners associated with the current agency.
+        """
         received_bets = load_bets()
         winners_bets = [bet for bet in received_bets if has_won(bet)]
         my_agency_winners = [
@@ -61,16 +74,25 @@ class Server:
         self.__notify_winners(my_agency_winners)
 
     def __receive_client(self):
+        """
+        Handles the process of accepting a new client connection and receiving bets from the client.
+
+        This method first accepts a new client connection. If a client socket is successfully
+        established, it proceeds to receive bets from the connected client.
+        """
         client_socket = self.__accept_new_connection()
         if client_socket:
             self.__receive_bets(client_socket)
 
     def __receive_bets(self, client_socket):
         """
-        Read message from a specific client socket and closes the socket
+        Handles the reception of bets from a client socket.
 
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
+        This method continuously reads data from the client socket, deserializes
+        the received bets, and stores them. It also keeps track of the total number
+        of bets received and any errors encountered during the deserialization
+        process. Once the client signals the end of transmission, the method logs
+        the results and sends a summary back to the client.
         """
         data_received = ""
         amount_of_bets = 0
@@ -114,7 +136,6 @@ class Server:
     def __graceful_shutdown_handler(self, signum=None, frame=None):
         """
         Function closes the server socket and all the client sockets
-        and then exits the program
         """
         logging.debug(
             f'action: graceful_shutdown | result: in_progress')
