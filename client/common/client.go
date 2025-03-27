@@ -49,6 +49,8 @@ func NewClient(config ClientConfig) *Client {
 	return client
 }
 
+// gracefulShutdown waits for a message to shutdown the client
+// and cleans up the resources
 func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
 	log.Debug("action: start_graceful_shutdown | result: success")
 	<-shutdownSignalChannel
@@ -88,6 +90,15 @@ func (c *Client) SubmitBets() error {
 	return c.sendBets()
 }
 
+// sendBets reads bets from a CSV file, processes them, and sends them in batches to a server.
+// It ensures that the batch size does not exceed the configured maximum size or the maximum
+// serialized size. After sending all bets, it notifies the server about the end of the process
+// and waits for statistics.
+//
+// Returns an error if there is an issue reading the file, processing a bet line, sending a batch,
+// or notifying the server.
+//
+// Errors are logged with appropriate context for debugging purposes.
 func (c *Client) sendBets() error {
 	betsFile, err := os.Open(c.config.BetsCsvPath)
 	if err != nil {
@@ -154,7 +165,8 @@ func (c *Client) processBetLine(line string) (string, error) {
 	return bet.Serialize(), nil
 }
 
-// sendAndResetBatch Sends the current batch and resets it
+// sendAndResetBatch sends the accumulated batch of data through the client's connection,
+// resets the batch builder, and updates the batch size to zero.
 func (c *Client) sendAndResetBatch(batch *strings.Builder, batchSize *int, outgoingBetsCount int) error {
 	log.Debugf("action: send_batch | batch size: %v | bets_sent: %v", *batchSize, outgoingBetsCount)
 	if err := WriteInSocket(c.conn, batch.String()); err != nil {
@@ -166,6 +178,10 @@ func (c *Client) sendAndResetBatch(batch *strings.Builder, batchSize *int, outgo
 	return nil
 }
 
+// notifyEndOfProcessAndWaitStats notifies the server the end of the process of sending bets
+// and waits for the server to send statistics.
+//
+// Returns an error if there is an issue notifying the server or reading the statistics.
 func (c *Client) notifyEndOfProcessAndWaitStats() error {
 	if err := WriteInSocket(c.conn, FINISH_MESSAGE); err != nil {
 		log.Errorf("action: notify_end_of_process | result: fail | error: %v", err)

@@ -20,6 +20,15 @@ def deserializeBets(data_csv: str) -> tuple[list[Bet], int]:
 
 
 def deserializeBet(data_csv: str) -> Bet:
+    """
+    Deserialize a CSV string into a Bet object.
+    Args:
+        data_csv (str): A string containing bet attributes separated by commas.
+                        The expected format is:
+                        "agency,first_name,last_name,document,birthdate,number"
+    Returns:
+        Bet: A Bet object initialized with the provided attributes.
+    """
     bet_attributes = data_csv.split(",")
     if len(bet_attributes) != 6:
         raise ValueError("Each bet must have 6 attributes")
