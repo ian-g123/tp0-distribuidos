@@ -12,6 +12,8 @@ import (
 	"github.com/op/go-logging"
 )
 
+const BET_ACKNOWLEDGED = "Bet received"
+
 var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
@@ -44,6 +46,8 @@ func NewClient(config ClientConfig) *Client {
 	return client
 }
 
+// gracefulShutdown waits for a message to shutdown the client
+// and cleans up the resources
 func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
 	log.Debug("action: start_graceful_shutdown | result: success")
 	<-shutdownSignalChannel
@@ -97,6 +101,7 @@ func (c *Client) SendBet(bet *Bet) error {
 	return nil
 }
 
+// sendToServer Sends a bet to the server
 func (c *Client) sendToServer(bet *Bet) error {
 	serializedBet := SerializeBet(bet)
 	if err := WriteInSocket(c.conn, serializedBet); err != nil {
@@ -113,6 +118,7 @@ func (c *Client) sendToServer(bet *Bet) error {
 	return nil
 }
 
+// waitForAck Waits for the server to acknowledge the bet
 func (c *Client) waitForAck() error {
 	message, err := ReadFromSocket(c.conn)
 	if err != nil {
@@ -122,7 +128,7 @@ func (c *Client) waitForAck() error {
 		)
 		return err
 	}
-	if message != "Bet received" {
+	if message != BET_ACKNOWLEDGED {
 		log.Errorf("action: wait_for_ack | result: fail | client_id: %v | message: %v",
 			c.config.ID,
 			message,

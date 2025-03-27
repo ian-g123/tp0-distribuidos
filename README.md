@@ -224,6 +224,8 @@ Si es necesario más tiempo para la detención de los contenedores, se puede cor
 docker-compose -f docker-compose-dev.yaml down -t <tiempo>
 ```
 
+Para este ejercicio se decidió cerrar los sockets de los clientes y servidores de forma _graceful_. De manera que las siguientes operaciones en curso terminen o fallen de forma controlada.
+
 ### Ejercicio N°5:
 
 Para ejecutar el programa se debe correr `make-docker-compose-up` que levantará una imagen con un apostor ya definido en docker-compose-dev.yaml y luego `make-docker-compose-logs` para ver los logs respectivos a la apuesta enviada y almacenada. Se debería ver parecido a lo siguiente:
@@ -240,4 +242,4 @@ client1  | 2025-03-19 17:56:31 INFO     action: apuesta_enviada | result: succes
 
 Además se puede ver el archivo `bets.csv` que guarda el servidor usando el comando `docker exec -it server bash` y luego `cat bets.csv`.
 
-El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato JSON, y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.
+El protocolo de comunicación implementado es el siguiente. Para el tipo de conexión se utilizó TCP para la comunicación confiable y orientada a la conexión. Para el formato de los mensajes se utilizó el formato CSV, ya que primeramente se quiso utilizar JSON, pero debido al overhead que trae la serialización de keys-values se decidió implementar un simple CSV y de forma manual su respectiva serialización y deserialización. Además se consideró los casos en los que pueda haber un error en donde el servidor recibe un mensaje mal formado o que no cumple con el protocolo, en estos casos el servidor envía un simple mensaje de error al cliente y cierra su conexión con el mismo.

@@ -6,6 +6,8 @@ from common.comunication import read_from_socket, write_in_socket
 from common.serializer import deserializeBet
 from common.utils import store_bets
 
+BET_ACKNOWLEDGED = "Bet received"
+
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -42,32 +44,35 @@ class Server:
 
     def __handle_client_connection(self):
         """
-        Read message from a specific client socket and closes the socket
+        Receive a bet from a client and store it in the database.
 
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
+        Then write a message to the client indicating that the bet was received
+        and close the connection
         """
         bet = self.__receive_bet()
         if not bet:
             return
         store_bets([bet])
-        write_in_socket(self._client_socket, "Bet received")
+        write_in_socket(self._client_socket, BET_ACKNOWLEDGED)
         self._client_socket.close()
         logging.info(
             f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}")
 
     def __receive_bet(self):
-        json_data = read_from_socket(self._client_socket)
-        if not json_data:
+        """
+        Receive a bet from a client and return it
+        """
+        received_bet_data = read_from_socket(self._client_socket)
+        if not received_bet_data:
             logging.error(
                 "action: receive_bet | result: fail | error: no data received")
             write_in_socket(self._client_socket, "Invalid bet")
             self._client_socket.close()
             return
         logging.debug(
-            f"action: receive_bet | result: in_progress | msg: {json_data}")
+            f"action: receive_bet | result: in_progress | msg: {received_bet_data}")
         try:
-            return deserializeBet(json_data)
+            return deserializeBet(received_bet_data)
         except Exception as e:
             logging.error(
                 f"action: deserialize_bet | result: fail | error: {e}")
@@ -76,8 +81,7 @@ class Server:
 
     def __graceful_shutdown_handler(self, signum=None, frame=None):
         """
-        Function closes the server socket and all the client sockets
-        and then exits the program
+        Closes the server socket and all the client sockets
         """
         logging.debug(
             f'action: graceful_shutdown | result: in_progress')
