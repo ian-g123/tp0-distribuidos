@@ -21,6 +21,17 @@ NETWORKS_CONFIG = """networks:
 
 
 def _generate_client_config(client_id: int) -> str:
+    """
+    Generates a Docker Compose service configuration for a client container.
+
+    Args:
+      client_id (int): The unique identifier for the client container.
+
+    Returns:
+      str: A string representing the Docker Compose service configuration
+         for the specified client, including container name, image, 
+         entrypoint, environment variables, network, and dependencies.
+    """
     return f"""  client{client_id}:
     container_name: client{client_id}
     image: client:latest
