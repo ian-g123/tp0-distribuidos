@@ -2,6 +2,7 @@ import signal
 import socket
 import logging
 
+from multiprocessing import Barrier, Process, Lock
 from common.comunication import read_from_socket, write_in_socket
 from common.serializer import deserializeBets
 from common.utils import has_won, load_bets, store_bets
@@ -15,38 +16,54 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+
         self._amount_of_clients = amount_of_clients
-        self._agency_sockets = {}
+        self._agency_socket = None
+        self._agency_id = None
+        self._lock = Lock()
+        self._barrier = Barrier(amount_of_clients)
         self._running = True
         self._shutting_down = False
 
         # Handle SIGINT (Ctrl+C) and SIGTERM (docker stop)
-        signal.signal(signal.SIGINT, signal.signal(
-            signal.SIGTERM, self.__graceful_shutdown_handler))
+        signal.signal(signal.SIGTERM, self.__graceful_shutdown_handler)
+        signal.signal(signal.SIGINT, self.__graceful_shutdown_handler)
 
     def run(self):
-        """
-        Dummy Server loop
-
-        Server that accept a new connections and establishes a
-        communication with a client. After client with communucation
-        finishes, servers starts to accept new connections again
-        """
+        processes = []
         try:
             for _ in range(self._amount_of_clients):
-                client_socket = self.__accept_new_connection()
-                if client_socket:
-                    self.__receive_bets(client_socket)
-            # consultar ganadores
-            logging.info("action: sorteo | result: success")
-            received_bets = load_bets()
-            winners_bets = [bet for bet in received_bets if has_won(bet)]
-            self.__notify_winners(winners_bets)
+                process = Process(target=self.__run)
+                process.start()
+                processes.append(process)
+            for process in processes:
+                process.join()
+        finally:
+            if not self._shutting_down:
+                self.__graceful_shutdown_handler()
+
+    def __run(self):
+        try:
+            self.__receive_client()
+            self._barrier.wait()
+            self.__handle_bet_results()
         except Exception as e:
             logging.error(f'action: server_error | result: fail | error: {e}')
         finally:
             if not self._shutting_down:
                 self.__graceful_shutdown_handler()
+
+    def __handle_bet_results(self):
+        received_bets = load_bets()
+        winners_bets = [bet for bet in received_bets if has_won(bet)]
+        my_agency_winners = [
+            bet for bet in winners_bets if bet.agency == self._agency_id]
+        self.__notify_winners(my_agency_winners)
+
+    def __receive_client(self):
+        client_socket = self.__accept_new_connection()
+        if client_socket:
+            self.__receive_bets(client_socket)
 
     def __receive_bets(self, client_socket):
         """
@@ -66,8 +83,10 @@ class Server:
             bets, errors = deserializeBets(data_received)
             if bets:
                 agency_bets = bets[0].agency
-                self._agency_sockets[agency_bets] = client_socket
-            store_bets(bets)
+                self._agency_socket = client_socket
+                self._agency_id = agency_bets
+            with self._lock:
+                store_bets(bets)
             amount_of_bets += len(bets)
             errors_in_bets += errors
         result = "success" if errors_in_bets == 0 else "fail"
@@ -82,29 +101,17 @@ class Server:
 
         Function sends a message to the winners of the lottery contest
         """
-        agency_winners = {agency: [] for agency in self._agency_sockets.keys()}
+        winners_doc = [winner.document for winner in winners_bets]
+        winners_doc = ",".join(winners_doc)
+        try:
+            write_in_socket(self._agency_socket, winners_doc)
+            logging.info(
+                f"action: notify_winners | result: success | agency: {self._agency_id} | winners: {winners_doc}")
+        except Exception as e:
+            logging.error(
+                f"action: notify_winners | result: fail | agency: {self._agency_id} | error: {e}")
 
-        # Sort winners by agency
-        while winners_bets:
-            winner_bet = winners_bets.pop()
-            agency_winners[winner_bet.agency].append(winner_bet.document)
-
-        # Notify each agency
-        for agency, winners in agency_winners.items():
-            winners_docs = ",".join(winners)
-            agency_socket = self._agency_sockets.get(agency)
-            if agency_socket:
-                try:
-                    write_in_socket(agency_socket, winners_docs)
-                    logging.info(
-                        f"action: notify_winners | result: success | agency: {agency} | winners: {winners_docs}")
-                except Exception as e:
-                    logging.error(
-                        f"action: notify_winners | result: fail | agency: {agency} | error: {e}")
-
-        logging.info("action: notify_winners | result: success")
-
-    def __graceful_shutdown_handler(self):
+    def __graceful_shutdown_handler(self, signum=None, frame=None):
         """
         Function closes the server socket and all the client sockets
         and then exits the program
@@ -116,9 +123,9 @@ class Server:
         if self._server_socket:
             self._server_socket.close()
             logging.info("action: close_server_socket | result: success")
-        for client_socket in self._agency_sockets.values():
-            client_socket.close()
-            logging.info("action: close_client_socket | result: success")
+        if self._agency_socket:
+            self._agency_socket.close()
+            logging.info("action: close_agency_socket | result: success")
         logging.info("action: graceful_shutdown | result: success")
 
     def __accept_new_connection(self):

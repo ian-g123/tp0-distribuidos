@@ -27,16 +27,20 @@ type ClientConfig struct {
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config     ClientConfig
+	conn       net.Conn
+	is_running bool
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config: config,
+		config:     config,
+		is_running: true,
 	}
+
+	// Handle system signals to gracefully shutdown the client
 	shutdownSignalChannel := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignalChannel, os.Interrupt, syscall.SIGTERM)
 	go client.gracefulShutdown(shutdownSignalChannel)
@@ -46,13 +50,12 @@ func NewClient(config ClientConfig) *Client {
 func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
 	log.Debug("action: start_graceful_shutdown | result: success")
 	<-shutdownSignalChannel
-	close(shutdownSignalChannel)
+	c.is_running = false
 	if c.conn != nil {
 		c.conn.Close()
 		log.Infof("action: close_client_socket | result: success")
 	}
 	log.Infof("action: shutdown | result: success")
-	os.Exit(0)
 }
 
 // CreateClientSocket Initializes client socket. In case of
@@ -116,6 +119,10 @@ func (c *Client) sendBets() error {
 			outgoingBetsCount = 0
 		}
 
+		if batch.Len() > 0 {
+			batch.WriteString(";")
+			batchSize++
+		}
 		batch.WriteString(serializedBet)
 		batchSize += serializedSize
 	}

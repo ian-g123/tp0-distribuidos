@@ -288,3 +288,10 @@ client3  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: suc
 client4  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 2
 client5  | 2025-03-23 18:37:37 INFO     action: consulta_ganadores | result: success | cant_ganadores: 0
 ```
+
+### Ejercicio N°8:
+
+Para este ejercicio se probó usar async, pero por alguna razón por la que carezco de conocimiento no aceptaba correctamente las conexiones (que me gustaría poder hablar con los profesores por simple conocimiento), por lo que se decidió implementar un sistema con multiprocessing.
+En un comienzo la idea de sincronización iba a ser sencilla y con pocos cambios del ej7 al ej8, pero desconozco porqué los subprocesos no se cerraban correctamente y al joinearlos estos quedaban colgados, el join iba a ser el barrier como mecanizmo de sincronización. Debido a esto se decidió usar simplemente barriers, creando un proceso por cada cliente y usando un barrier para determinar cuando se recibieron correctamente todas las apuestas de los clientes. Luego cada proceso avisaría a su respectivo cliente.
+
+La ejecución es la misma que en el ejercicio 7.

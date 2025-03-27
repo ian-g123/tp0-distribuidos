@@ -1,38 +1,33 @@
 import logging
 from common.utils import Bet
-
-REQUIRED_KEYS = {"agency", "firstName",
-                 "lastName", "document", "birthdate", "number"}
+from datetime import date
 
 
-def deserializeBets(data_json: str) -> tuple[list[Bet], int]:
+def deserializeBets(data_csv: str) -> tuple[list[Bet], int]:
     """
-    Deserializes a JSON string into a Bet object.
+    Deserializes csv data into a Bet object
     """
-    if not data_json.startswith("{") or not data_json.endswith("}"):
-        raise ValueError("Invalid JSON string")
-    serialized_bets = data_json.split("}{")
-
     bets = []
-    bet_errors = 0
+    errors = 0
+    for bet_csv in data_csv.split(";"):
+        try:
+            bet = deserializeBet(bet_csv)
+            bets.append(bet)
+        except ValueError as e:
+            logging.error(f"Error deserializing bet: {e}")
+            errors += 1
+    return bets, errors
 
-    for serialized_bet in serialized_bets:
-        if serialized_bet.startswith("{"):
-            serialized_bet = serialized_bet[1:]
-        if serialized_bet.endswith("}"):
-            serialized_bet = serialized_bet[:-1]
-        bet = {}
-        for key_value_pair in serialized_bet.split(","):
-            key, value = key_value_pair.split(":")
-            # remove quotes
-            key = key.strip()[1:-1]
-            value = value.strip()[1:-1]
-            bet[key] = value
 
-        if not REQUIRED_KEYS.issubset(bet.keys()) or not bet["agency"].isdigit() or not bet["number"].isdigit():
-            bet_errors += 1
-            continue
+def deserializeBet(data_csv: str) -> Bet:
+    bet_attributes = data_csv.split(",")
+    if len(bet_attributes) != 6:
+        raise ValueError("Each bet must have 6 attributes")
+    if not bet_attributes[0].isdigit() or not bet_attributes[5].isdigit():
+        raise ValueError("agency and bet number must be integers")
+    try:
+        date.fromisoformat(bet_attributes[4])
+    except ValueError:
+        raise ValueError("birthdate must be in the format 'YYYY-MM-DD'")
 
-        bets.append(Bet(bet["agency"], bet["firstName"], bet["lastName"],
-                    bet["document"], bet["birthdate"], bet["number"]))
-    return bets, bet_errors
+    return Bet(*bet_attributes)
