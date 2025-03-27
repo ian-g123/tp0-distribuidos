@@ -1,3 +1,5 @@
+// merge 5 con 4
+
 package common
 
 import (
@@ -22,16 +24,20 @@ type ClientConfig struct {
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config     ClientConfig
+	conn       net.Conn
+	is_running bool
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
-		config: config,
+		config:     config,
+		is_running: true,
 	}
+
+	// Handle system signals to gracefully shutdown the client
 	shutdownSignalChannel := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignalChannel, os.Interrupt, syscall.SIGTERM)
 	go client.gracefulShutdown(shutdownSignalChannel)
@@ -41,13 +47,12 @@ func NewClient(config ClientConfig) *Client {
 func (c *Client) gracefulShutdown(shutdownSignalChannel chan os.Signal) {
 	log.Debug("action: start_graceful_shutdown | result: success")
 	<-shutdownSignalChannel
-	close(shutdownSignalChannel)
+	c.is_running = false
 	if c.conn != nil {
 		c.conn.Close()
 		log.Infof("action: close_client_socket | result: success")
 	}
 	log.Infof("action: shutdown | result: success")
-	os.Exit(0)
 }
 
 // CreateClientSocket Initializes client socket. In case of
@@ -78,7 +83,21 @@ func (c *Client) SendBet(bet *Bet) error {
 		return err
 	}
 	defer c.conn.Close()
+	if err := c.sendToServer(bet); err != nil {
+		return err
+	}
+	if err := c.waitForAck(); err != nil {
+		return err
+	}
+	log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+		bet.Document,
+		bet.Number,
+	)
 
+	return nil
+}
+
+func (c *Client) sendToServer(bet *Bet) error {
 	serializedBet := SerializeBet(bet)
 	if err := WriteInSocket(c.conn, serializedBet); err != nil {
 		log.Errorf("action: write_in_socket | result: fail | client_id: %v | error: %v",
@@ -91,19 +110,6 @@ func (c *Client) SendBet(bet *Bet) error {
 		c.config.ID,
 		serializedBet,
 	)
-
-	if err := c.waitForAck(); err != nil {
-		log.Errorf("action: wait_for_ack | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
-		return err
-	}
-	log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-		bet.Document,
-		bet.Number,
-	)
-
 	return nil
 }
 
